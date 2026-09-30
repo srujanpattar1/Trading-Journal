@@ -474,6 +474,8 @@ table.t .num { text-align:right; }
 'use strict';
 /* ================= CONSTANTS ================= */
 const KEY = 'swingJournal', THEME_KEY = 'swingJournalTheme';
+const IS_GITHUB_PAGES = /\.github\.io$/i.test(window.location.hostname);
+const PUBLIC_DATA_FILE = './data.json';
 const PROFILES = {
   HW: { name: 'HIGH WIN', partialR: 1.5, timeStop: 7 },
   MP: { name: 'MAX PROFIT', partialR: 2.5, timeStop: 10 }
@@ -519,41 +521,62 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 
 /* ================= STORE ================= */
 let store = load();
+
 function load() {
   let s = { trades: [], settings: {} };
-  try { const raw = localStorage.getItem(KEY); if (raw) s = JSON.parse(raw) || s; } catch (e) { console.error('load failed', e); }
+
+  // Your local editor keeps using localStorage.
+  // The public GitHub Pages version loads data.json instead.
+  if (!IS_GITHUB_PAGES) {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) s = JSON.parse(raw) || s;
+    } catch (e) {
+      console.error('load failed', e);
+    }
+  }
+
   s.trades = Array.isArray(s.trades) ? s.trades : [];
   s.settings = Object.assign({}, DEFAULTS, s.settings || {});
   s.trades.forEach(normalize);
   return s;
 }
-function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(store)); return true; }
-  catch (e) { toast('Could not save — browser storage is full or blocked. Export a backup now.', 'bad'); return false; }
-}
-function prof() { return PROFILES[store.settings.profile] || PROFILES.HW; }
 
-/* Makes old entries (v1) compatible and recomputes derived values */
-function normalize(t) {
-  t.id = t.id || uid();
-  t.symbol = (t.symbol || '').toUpperCase();
-  t.entry = num(t.entry);
-  t.stop = num(t.stop);
-  t.initialStop = num(t.initialStop) ?? t.stop;
-  if (t.stop == null) t.stop = t.initialStop;
-  t.target = num(t.target);
-  t.qty = t.qty == null || t.qty === '' ? null : (parseInt(t.qty, 10) || null);
-  t.partials = Array.isArray(t.partials) ? t.partials.filter(p => p && ok(num(p.price)) && num(p.qty) > 0).map(p => ({ qty: parseInt(p.qty, 10), price: num(p.price), date: p.date || '' })) : [];
-  t.tags = Array.isArray(t.tags) ? t.tags : [];
-  if (!Array.isArray(t.checks)) t.checks = null;
-  if (!Array.isArray(t.emotions)) t.emotions = null;
-  if (t.checks) t.score = t.checks.filter(Boolean).length;
-  t.score = Number.isFinite(+t.score) ? +t.score : 0;
-  t.exitPrice = num(t.exitPrice);
-  t.fees = num(t.fees);
-  if (t.ruleFollowed === undefined) t.ruleFollowed = null;
-  t.rMultiple = t.exitPrice != null ? computeR(t) : null;
-  return t;
+function save() {
+  // Visitors cannot save changes to your published journal.
+  if (IS_GITHUB_PAGES) return true;
+
+  try {
+    localStorage.setItem(KEY, JSON.stringify(store));
+    return true;
+  } catch (e) {
+    toast('Could not save — browser storage is full or blocked. Export a backup now.', 'bad');
+    return false;
+  }
+}
+
+async function loadPublishedJournal() {
+  if (!IS_GITHUB_PAGES) return;
+
+  try {
+    const response = await fetch(PUBLIC_DATA_FILE, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Could not load data.json (${response.status})`);
+
+    const publishedData = await response.json();
+    if (!publishedData || !Array.isArray(publishedData.trades)) {
+      throw new Error('data.json is not a valid journal backup');
+    }
+
+    store = publishedData;
+    store.trades = Array.isArray(store.trades) ? store.trades : [];
+    store.settings = Object.assign({}, DEFAULTS, store.settings || {});
+    store.trades.forEach(normalize);
+
+    renderAll();
+  } catch (error) {
+    console.error('Published journal load failed:', error);
+    toast('Could not load published journal data. Check data.json.', 'bad');
+  }
 }
 
 /* ================= TRADE MATHS =================
@@ -1344,8 +1367,13 @@ document.addEventListener('keydown', e => {
 })();
 
 function renderAll() { renderStats(); activeTab === 'analytics' ? renderAnalytics() : renderList(); }
-save();          // persist migrated (v1 → v2) data
 renderAll();
+
+if (IS_GITHUB_PAGES) {
+  loadPublishedJournal();
+} else {
+  save();
+}
 </script>
 </body>
 </html>

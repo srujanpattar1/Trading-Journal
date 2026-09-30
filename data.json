@@ -1,0 +1,55 @@
+{
+  "trades": [
+    {
+      "id": "mum91vrztuzo",
+      "date": "2026-09-29",
+      "symbol": "AZAD",
+      "sector": "Defense, and Producer Manufacturing",
+      "source": "",
+      "score": 5,
+      "entry": 2861,
+      "stop": 2558,
+      "target": 3600,
+      "qty": 5,
+      "thesis": "Pullback to ema 20",
+      "exitPrice": null,
+      "exitDate": null,
+      "rMultiple": null,
+      "lesson": "",
+      "initialStop": 2553,
+      "partials": [],
+      "tags": [],
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "emotions": [
+        true,
+        true,
+        true
+      ],
+      "fees": null,
+      "ruleFollowed": null,
+      "verdict": "",
+      "speed": "",
+      "chart": "",
+      "plannedBreaks": [
+        "Checklist is 5/6 — the system needs all 6",
+        "Stop is 10.8% away — max is 8%"
+      ]
+    }
+  ],
+  "settings": {
+    "capital": 500000,
+    "riskPct": 1,
+    "profile": "HW",
+    "maxOpen": 5,
+    "maxPerDay": 2,
+    "maxPosPct": 25,
+    "goal": 50
+  }
+}
